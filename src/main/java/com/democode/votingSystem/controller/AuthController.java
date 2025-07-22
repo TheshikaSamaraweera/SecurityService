@@ -1,12 +1,11 @@
 package com.democode.votingSystem.controller;
 
-import com.democode.votingSystem.dto.LoginRequest;
-import com.democode.votingSystem.dto.LoginResponse;
-import com.democode.votingSystem.dto.RegisterRequest;
-import com.democode.votingSystem.dto.RegisterResponse;
+import com.democode.votingSystem.dto.*;
 import com.democode.votingSystem.services.AuthService;
+import com.democode.votingSystem.services.MfaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +16,7 @@ public class AuthController {
 
     @Autowired
     private final AuthService authService;
+    private final MfaService mfaService;
 
 
     @PostMapping("/register")
@@ -32,6 +32,11 @@ public class AuthController {
     @GetMapping("/verify")
     public String verifyEmail(@RequestParam String token) {
         return authService.verifyEmail(token);
+    }
+
+    @PostMapping("/mfa/setup")
+    public ResponseEntity<MfaSetup> setupMfa(@RequestParam String email) {
+        return ResponseEntity.ok(mfaService.generateMfaSecret(email));
     }
 
 }
