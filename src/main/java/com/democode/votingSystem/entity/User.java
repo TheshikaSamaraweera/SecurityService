@@ -2,6 +2,8 @@ package com.democode.votingSystem.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.Date;
 import java.util.UUID;
 
 @Entity
@@ -37,4 +39,8 @@ public class User {
 
     @Builder.Default
     private boolean isEmailVerified = false;
+
+    private String emailVerificationToken;
+    private Date emailVerificationExpiry;
+
 }

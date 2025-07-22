@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.security.KeyPair;
+import java.util.Date;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,11 @@ public class AuthService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final JwtUtil jwtUtil;
+
+
+
+
+
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
@@ -41,6 +48,9 @@ public class AuthService {
             String encryptedPrivateKey = CryptoUtil.encryptAES(
                     CryptoUtil.encodeKey(keyPair.getPrivate()), aesKey);
 
+            String token = UUID.randomUUID().toString();
+            Date expiry = new Date(System.currentTimeMillis() + 1000 * 60 * 60); // 1 hour
+
             // 4. Store user
             User user = User.builder()
                     .name(request.getName())
@@ -50,9 +60,13 @@ public class AuthService {
                     .encryptedPrivateKey(encryptedPrivateKey)
                     .role(request.getRole())
                     .mfaSecret(request.isMfaEnabled() ? "TO_BE_GENERATED" : null)
+                    .emailVerificationToken(token)
+                    .emailVerificationExpiry(expiry)
+                    .isEmailVerified(false)
                     .build();
 
             userRepository.save(user);
+            System.out.println("Click to verify email: http://localhost:8080/api/auth/verify?token=" + token);
             return new RegisterResponse("Registration successful!");
 
         } catch (Exception e) {
@@ -83,6 +97,24 @@ public class AuthService {
         String jwt = jwtUtil.generateToken(user.getEmail(), user.getRole());
 
         return new LoginResponse(jwt);
+    }
+
+    public String verifyEmail(String token) {
+        var user = userRepository.findAll().stream()
+                .filter(u -> token.equals(u.getEmailVerificationToken()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Invalid verification token"));
+
+        if (user.getEmailVerificationExpiry().before(new Date())) {
+            throw new RuntimeException("Verification token expired");
+        }
+
+        user.setEmailVerified(true);
+        user.setEmailVerificationToken(null);
+        user.setEmailVerificationExpiry(null);
+        userRepository.save(user);
+
+        return "✅ Email verified successfully!";
     }
 
 
