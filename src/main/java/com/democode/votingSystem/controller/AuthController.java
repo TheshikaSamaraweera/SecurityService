@@ -1,5 +1,7 @@
 package com.democode.votingSystem.controller;
 
+import com.democode.votingSystem.dto.LoginRequest;
+import com.democode.votingSystem.dto.LoginResponse;
 import com.democode.votingSystem.dto.RegisterRequest;
 import com.democode.votingSystem.dto.RegisterResponse;
 import com.democode.votingSystem.services.AuthService;
@@ -24,4 +26,10 @@ public class AuthController {
     public RegisterResponse register(@RequestBody RegisterRequest request) {
         return authService.register(request);
     }
+
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody LoginRequest request) {
+        return authService.login(request);
+    }
+
 }

@@ -34,7 +34,11 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	testImplementation 'org.springframework.security:spring-security-test'
-
+	implementation 'com.warrenstrange:googleauth:1.5.0'
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5' // for JSON parsing
+	implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 }
 
 tasks.named('test') {
