@@ -43,4 +43,8 @@ public class User {
     private String emailVerificationToken;
     private Date emailVerificationExpiry;
 
+    private String aesSalt;   // Base64
+    private String aesIv;     // Base64
+
+
 }

@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.security.KeyPair;
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.UUID;
 
@@ -44,9 +45,15 @@ public class AuthService {
             String hashedPassword = passwordEncoder.encode(request.getPassword());
 
             // 3. Derive AES key and encrypt private key
-            SecretKey aesKey = CryptoUtil.getAESKeyFromPassword(request.getPassword());
+            byte[] salt = CryptoUtil.generateSalt();
+            SecretKey aesKey = CryptoUtil.deriveAESKeyPBKDF2(request.getPassword(), salt);
+
+            byte[] iv = new byte[16];
+            new SecureRandom().nextBytes(iv);
+
             String encryptedPrivateKey = CryptoUtil.encryptAES(
-                    CryptoUtil.encodeKey(keyPair.getPrivate()), aesKey);
+                    CryptoUtil.encodeKey(keyPair.getPrivate()), aesKey, iv);
+
 
             String token = UUID.randomUUID().toString();
             Date expiry = new Date(System.currentTimeMillis() + 1000 * 60 * 60); // 1 hour
@@ -59,6 +66,8 @@ public class AuthService {
                     .publicKey(CryptoUtil.encodeKey(keyPair.getPublic()))
                     .encryptedPrivateKey(encryptedPrivateKey)
                     .role(request.getRole())
+                    .aesIv(CryptoUtil.encodeBytes(iv))
+                    .aesSalt(CryptoUtil.encodeBytes(salt))
                     .mfaSecret(request.isMfaEnabled() ? "TO_BE_GENERATED" : null)
                     .emailVerificationToken(token)
                     .emailVerificationExpiry(expiry)
