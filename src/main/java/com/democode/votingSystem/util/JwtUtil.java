@@ -4,9 +4,12 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 @Component
 public class JwtUtil {
@@ -35,6 +38,9 @@ public class JwtUtil {
                 .setExpiration(expiryDate)
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+
+
+
     }
 
     public Claims validateToken(String token) {
@@ -55,5 +61,10 @@ public class JwtUtil {
 
     public String getRoleFromToken(String token) {
         return (String) validateToken(token).get("role");
+    }
+
+    public List<SimpleGrantedAuthority> getAuthorities(String token) {
+        String role = getRoleFromToken(token);
+        return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 }

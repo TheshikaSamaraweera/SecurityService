@@ -46,5 +46,11 @@ public class User {
     private String aesSalt;   // Base64
     private String aesIv;     // Base64
 
+    @Column(name = "reset_token")
+    private String resetToken;
+
+
+
+
 
 }
