@@ -48,6 +48,8 @@ public class User {
 
     @Column(name = "reset_token")
     private String resetToken;
+    @Column(name = "reset_token_expire")
+    private Date resetTokenExpiry;
 
 
 

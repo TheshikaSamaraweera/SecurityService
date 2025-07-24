@@ -37,4 +37,25 @@ public class MailService {
             throw new RuntimeException("Failed to send verification email", e);
         }
     }
+
+    public void sendResetPasswordEmail(String to, String resetLink) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setTo(to);
+            helper.setSubject("Reset Your Password - Voting System");
+            helper.setFrom(from);
+            helper.setText(
+                    "<p>Hello,</p>" +
+                            "<p>You requested to reset your password. Click below:</p>" +
+                            "<a href=\"" + resetLink + "\">Reset Password</a>" +
+                            "<p>This link will expire in 15 minutes.</p>", true
+            );
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send reset password email", e);
+        }
+    }
 }
