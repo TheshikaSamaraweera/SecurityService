@@ -67,4 +67,21 @@ public class JwtUtil {
         String role = getRoleFromToken(token);
         return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
+
+
+    public String generateRefreshToken(String email, String role) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000L); // 7 days
+
+        return Jwts.builder()
+                .setSubject(email)
+                .claim("role", role)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+
+
 }

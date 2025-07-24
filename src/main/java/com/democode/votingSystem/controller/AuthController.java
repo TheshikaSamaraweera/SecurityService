@@ -5,7 +5,10 @@ import com.democode.votingSystem.repository.UserRepository;
 import com.democode.votingSystem.services.AuthService;
 import com.democode.votingSystem.services.MailService;
 import com.democode.votingSystem.services.MfaService;
+import com.democode.votingSystem.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +34,7 @@ public class AuthController {
     private  final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
+    private final JwtUtil jwtUtil;
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -44,13 +48,23 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         LoginResponse loginResponse = authService.login(request);
 
-        Cookie cookie = new Cookie("token", loginResponse.getToken());
-        cookie.setHttpOnly(true); // prevents JavaScript access
-        cookie.setSecure(true);   // send only over HTTPS
-        cookie.setPath("/");      // accessible across the site
-        cookie.setMaxAge(60 * 60); // 1 hour
+        // Access Token cookie
+        Cookie accessCookie = new Cookie("token", loginResponse.getToken());
+        accessCookie.setHttpOnly(true);
+        accessCookie.setSecure(true);
+        accessCookie.setPath("/");
+        accessCookie.setMaxAge(1 * 60); // 25 minutes
 
-        response.addCookie(cookie);
+        // Refresh Token cookie
+        Cookie refreshCookie = new Cookie("refresh", loginResponse.getRefreshToken());
+        refreshCookie.setHttpOnly(true);
+        refreshCookie.setSecure(true);
+        refreshCookie.setPath("/");
+        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+
+        response.addCookie(accessCookie);
+        response.addCookie(refreshCookie);
+
         return ResponseEntity.ok(Map.of("message", "Login successful"));
     }
 
@@ -112,6 +126,45 @@ public class AuthController {
 
         response.addCookie(cookie);
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
+
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<?> refreshToken(HttpServletRequest request, HttpServletResponse response) {
+        String refreshToken = null;
+
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("refresh".equals(cookie.getName())) {
+                    refreshToken = cookie.getValue();
+                }
+            }
+        }
+
+        if (refreshToken == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Refresh token missing"));
+        }
+
+        try {
+            Claims claims = jwtUtil.validateToken(refreshToken);
+            String email = claims.getSubject();
+            String role = claims.get("role", String.class);
+
+            String newAccessToken = jwtUtil.generateToken(email, role);
+
+            Cookie newAccessCookie = new Cookie("token", newAccessToken);
+            newAccessCookie.setHttpOnly(true);
+            newAccessCookie.setSecure(true);
+            newAccessCookie.setPath("/");
+            newAccessCookie.setMaxAge(15 * 60);
+
+            response.addCookie(newAccessCookie);
+
+            return ResponseEntity.ok(Map.of("message", "Access token refreshed"));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid refresh token"));
+        }
     }
 
 

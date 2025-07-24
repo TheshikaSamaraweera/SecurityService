@@ -113,10 +113,11 @@ public class AuthService {
             }
         }
 
-        // Generate JWT (we’ll implement JWT utility soon)
-        String jwt = jwtUtil.generateToken(user.getEmail(), user.getRole());
 
-        return new LoginResponse(jwt);
+        String accessToken = jwtUtil.generateToken(user.getEmail(), user.getRole());
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail(), user.getRole()); // 👉 Add this method
+
+        return new LoginResponse(accessToken, refreshToken);
     }
 
     public String verifyEmail(String token) {
