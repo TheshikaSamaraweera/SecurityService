@@ -9,9 +9,11 @@ import com.democode.votingSystem.repository.UserRepository;
 import com.democode.votingSystem.util.CryptoUtil;
 import com.democode.votingSystem.util.JwtUtil;
 import com.democode.votingSystem.util.TotpUtil;
+import com.warrenstrange.googleauth.GoogleAuthenticator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,9 +31,10 @@ public class AuthService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final JwtUtil jwtUtil;
+    private final MailService mailService;
 
-
-
+    @Value("${app.base-url}")
+    private String baseUrl; // ✅ Remove `final`
 
 
 
@@ -58,6 +61,13 @@ public class AuthService {
             String token = UUID.randomUUID().toString();
             Date expiry = new Date(System.currentTimeMillis() + 1000 * 60 * 60); // 1 hour
 
+
+            // ✅ Generate real MFA secret if enabled
+            String mfaSecret = request.isMfaEnabled()
+                    ? new GoogleAuthenticator().createCredentials().getKey()
+                    : null;
+
+
             // 4. Store user
             User user = User.builder()
                     .name(request.getName())
@@ -68,14 +78,15 @@ public class AuthService {
                     .role(request.getRole())
                     .aesIv(CryptoUtil.encodeBytes(iv))
                     .aesSalt(CryptoUtil.encodeBytes(salt))
-                    .mfaSecret(request.isMfaEnabled() ? "TO_BE_GENERATED" : null)
+                    .mfaSecret(mfaSecret)
                     .emailVerificationToken(token)
                     .emailVerificationExpiry(expiry)
                     .isEmailVerified(false)
                     .build();
 
             userRepository.save(user);
-            System.out.println("Click to verify email: http://localhost:8080/api/auth/verify?token=" + token);
+            String link = baseUrl + "/api/auth/verify?token=" + token;
+            mailService.sendVerificationEmail(request.getEmail(), link);
             return new RegisterResponse("Registration successful!");
 
         } catch (Exception e) {
