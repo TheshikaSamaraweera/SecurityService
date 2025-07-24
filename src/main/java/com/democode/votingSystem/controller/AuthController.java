@@ -3,6 +3,7 @@ package com.democode.votingSystem.controller;
 import com.democode.votingSystem.dto.*;
 import com.democode.votingSystem.repository.UserRepository;
 import com.democode.votingSystem.services.AuthService;
+import com.democode.votingSystem.services.LoginAttemptService;
 import com.democode.votingSystem.services.MailService;
 import com.democode.votingSystem.services.MfaService;
 import com.democode.votingSystem.util.JwtUtil;
@@ -35,6 +36,8 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final MailService mailService;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
+
 
     @Value("${app.base-url}")
     private String baseUrl;
@@ -46,27 +49,48 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
-        LoginResponse loginResponse = authService.login(request);
+        String key = request.getEmail(); // or use IP address for IP-based protection
 
-        // Access Token cookie
-        Cookie accessCookie = new Cookie("token", loginResponse.getToken());
-        accessCookie.setHttpOnly(true);
-        accessCookie.setSecure(true);
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(1 * 60); // 25 minutes
+        // Check if login is blocked for this key
+        if (loginAttemptService.isBlocked(key)) {
+            return ResponseEntity.status(429).body(Map.of(
+                    "error", "Too many failed login attempts. Please try again later."
+            ));
+        }
 
-        // Refresh Token cookie
-        Cookie refreshCookie = new Cookie("refresh", loginResponse.getRefreshToken());
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setSecure(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+        try {
+            // Call service to authenticate user and generate tokens
+            LoginResponse loginResponse = authService.login(request);
 
-        response.addCookie(accessCookie);
-        response.addCookie(refreshCookie);
+            // Reset login attempts on success
+            loginAttemptService.loginSucceeded(key);
 
-        return ResponseEntity.ok(Map.of("message", "Login successful"));
+            // Access Token cookie
+            Cookie accessCookie = new Cookie("token", loginResponse.getToken());
+            accessCookie.setHttpOnly(true);
+            accessCookie.setSecure(true);
+            accessCookie.setPath("/");
+            accessCookie.setMaxAge(15 * 60); // 15 minutes
+
+            // Refresh Token cookie
+            Cookie refreshCookie = new Cookie("refresh", loginResponse.getRefreshToken());
+            refreshCookie.setHttpOnly(true);
+            refreshCookie.setSecure(true);
+            refreshCookie.setPath("/");
+            refreshCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+
+            response.addCookie(accessCookie);
+            response.addCookie(refreshCookie);
+
+            return ResponseEntity.ok(Map.of("message", "Login successful"));
+
+        } catch (Exception ex) {
+            // Record failed attempt
+            loginAttemptService.loginFailed(key);
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+        }
     }
+
 
     @GetMapping("/verify")
     public String verifyEmail(@RequestParam String token) {
