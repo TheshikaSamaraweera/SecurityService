@@ -5,6 +5,8 @@ import com.democode.votingSystem.repository.UserRepository;
 import com.democode.votingSystem.services.AuthService;
 import com.democode.votingSystem.services.MailService;
 import com.democode.votingSystem.services.MfaService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,8 +41,17 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
-        return authService.login(request);
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
+        LoginResponse loginResponse = authService.login(request);
+
+        Cookie cookie = new Cookie("token", loginResponse.getToken());
+        cookie.setHttpOnly(true); // prevents JavaScript access
+        cookie.setSecure(true);   // send only over HTTPS
+        cookie.setPath("/");      // accessible across the site
+        cookie.setMaxAge(60 * 60); // 1 hour
+
+        response.addCookie(cookie);
+        return ResponseEntity.ok(Map.of("message", "Login successful"));
     }
 
     @GetMapping("/verify")
@@ -91,6 +102,18 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of("message", "Password reset successful."));
     }
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("token", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // Delete immediately
+
+        response.addCookie(cookie);
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
 
 
 }
