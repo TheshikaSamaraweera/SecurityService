@@ -125,5 +125,11 @@ public class CryptoUtil {
         return signature.verify(sigBytes);
     }
     
+    public static String decryptRSA(String encryptedBase64, PrivateKey privateKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
+        byte[] decoded = Base64.getDecoder().decode(encryptedBase64);
+        return new String(cipher.doFinal(decoded));
+    }
 
 }

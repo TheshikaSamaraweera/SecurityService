@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/vote")
 @RequiredArgsConstructor
@@ -71,6 +73,28 @@ public class VoteController {
             return ResponseEntity.ok("Vote validated successfully");
         } catch (Exception e) {
             return ResponseEntity.status(400).body("Validation failed: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/bulletin")
+    public ResponseEntity<?> getBulletinBoard() {
+        // Only show validated votes
+        var votes = voteService.getBulletinBoard();
+        return ResponseEntity.ok(votes);
+    }
+
+    @PostMapping("/tally")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> tallyVotes(@RequestBody Map<String, String> body) {
+        String eaPrivateKeyPem = body.get("eaPrivateKey");
+        if (eaPrivateKeyPem == null || eaPrivateKeyPem.isEmpty()) {
+            return ResponseEntity.badRequest().body("Missing eaPrivateKey in request body");
+        }
+        try {
+            var tally = voteService.tallyVotes(eaPrivateKeyPem);
+            return ResponseEntity.ok(tally);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Tallying failed: " + e.getMessage());
         }
     }
 }

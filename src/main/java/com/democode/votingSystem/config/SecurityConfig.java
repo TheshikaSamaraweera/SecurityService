@@ -27,7 +27,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/reset-password/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/vote/submit").hasRole("VOTER")
-                        .requestMatchers("/api/vote/pending", "/api/vote/validate/**").hasRole("ADMIN")
+                        .requestMatchers("/api/vote/pending", "/api/vote/tally" , "/api/vote/validate/**").hasRole("ADMIN")
+                        .requestMatchers("/api/vote/bulletin").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)  // << Add this!

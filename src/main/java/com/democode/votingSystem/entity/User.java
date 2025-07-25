@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.util.Date;
 import java.util.UUID;
+import java.security.*;
+import java.util.Base64;
 
 @Entity
 @Table(name = "users")
@@ -53,7 +55,20 @@ public class User {
     private Date resetTokenExpiry;
 
 
+    public static void main(String[] args) throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        KeyPair keyPair = generator.generateKeyPair();
 
+        String privateKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPrivate().getEncoded());
+        String publicKeyBase64 = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
+
+        System.out.println("Private Key (Base64):");
+        System.out.println(privateKeyBase64);
+        System.out.println();
+        System.out.println("Public Key (Base64):");
+        System.out.println(publicKeyBase64);
+    }
 
 
 }
