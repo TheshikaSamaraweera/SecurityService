@@ -82,6 +82,16 @@ public class AuthController {
             response.addCookie(accessCookie);
             response.addCookie(refreshCookie);
 
+            // Set encrypted private key cookie
+            var user = userRepository.findByEmail(request.getEmail()).orElseThrow();
+            String encryptedPrivateKeyForCookie = authService.getEncryptedPrivateKeyForCookie(user, request.getPassword());
+            Cookie privateKeyCookie = new Cookie("privateKey", encryptedPrivateKeyForCookie);
+            privateKeyCookie.setHttpOnly(true);
+            privateKeyCookie.setSecure(true);
+            privateKeyCookie.setPath("/");
+            privateKeyCookie.setMaxAge(15 * 60); // 15 minutes (same as token)
+            response.addCookie(privateKeyCookie);
+
             return ResponseEntity.ok(Map.of("message", "Login successful"));
 
         } catch (Exception ex) {

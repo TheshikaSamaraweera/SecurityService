@@ -22,6 +22,7 @@ import java.security.KeyPair;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.UUID;
+import javax.crypto.spec.SecretKeySpec;
 
 @Service
 @RequiredArgsConstructor
@@ -36,6 +37,27 @@ public class AuthService {
     @Value("${app.base-url}")
     private String baseUrl; // ✅ Remove `final`
 
+    // Server-side AES key and IV for encrypting private key in cookie (for demo, static values)
+    private static final String SERVER_SIDE_KEY = "0123456789abcdef0123456789abcdef"; // 32 chars = 256 bits
+    private static final String SERVER_SIDE_IV = "abcdef9876543210"; // 16 chars = 128 bits
+
+    public static SecretKey getServerSideAESKey() {
+        return new SecretKeySpec(SERVER_SIDE_KEY.getBytes(), "AES");
+    }
+    public static byte[] getServerSideIV() {
+        return SERVER_SIDE_IV.getBytes();
+    }
+
+    // Decrypt user's private key with password, then encrypt with server key for cookie
+    public String getEncryptedPrivateKeyForCookie(User user, String password) throws Exception {
+        byte[] salt = CryptoUtil.decodeBytes(user.getAesSalt());
+        byte[] iv = CryptoUtil.decodeBytes(user.getAesIv());
+        SecretKey aesKey = CryptoUtil.deriveAESKeyPBKDF2(password, salt);
+        String decryptedPrivateKeyPem = CryptoUtil.decryptAES(user.getEncryptedPrivateKey(), aesKey, iv);
+        SecretKey serverKey = getServerSideAESKey();
+        byte[] serverIv = getServerSideIV();
+        return CryptoUtil.encryptWithServerKey(decryptedPrivateKeyPem, serverKey, serverIv);
+    }
 
 
     @Transactional

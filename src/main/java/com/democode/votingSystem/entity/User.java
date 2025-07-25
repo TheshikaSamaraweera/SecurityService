@@ -25,13 +25,14 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    @Lob
-    @Column(nullable = false)
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String publicKey;
 
-    @Lob
-    @Column(nullable = false)
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String encryptedPrivateKey;
+
 
     private String role; // "VOTER" or "ADMIN"
 
